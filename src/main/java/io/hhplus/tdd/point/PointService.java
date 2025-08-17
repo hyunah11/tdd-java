@@ -14,11 +14,10 @@ public class PointService {
     private final UserPointTable userPointTable;
     private final PointHistoryTable pointHistoryTable;
 
-    private final java.util.concurrent.ConcurrentHashMap<Long, java.util.concurrent.locks.ReentrantLock> lockMap = new java.util.concurrent.ConcurrentHashMap<>();
-    private java.util.concurrent.locks.ReentrantLock lockFor(long userId) {
-        return lockMap.computeIfAbsent(userId, k -> new java.util.concurrent.locks.ReentrantLock());
+    private final ConcurrentHashMap<Long, ReentrantLock> lockMap = new ConcurrentHashMap<>();
+    private ReentrantLock lockFor(long userId) {
+        return lockMap.computeIfAbsent(userId, k -> new ReentrantLock());
     }
-
     public UserPoint getUserPoint(long id) {
         return userPointTable.selectById(id);
     }
