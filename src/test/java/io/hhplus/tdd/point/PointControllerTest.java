@@ -1,5 +1,6 @@
 package io.hhplus.tdd.point;
 
+import io.hhplus.tdd.point.exception.PointException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -105,5 +106,75 @@ class PointControllerTest {
                 .andExpect(jsonPath("$[0].userId").value(userId))
                 .andExpect(jsonPath("$[0].amount").value(1000L))
                 .andExpect(jsonPath("$[0].type").value("CHARGE"));
+    }
+
+    @Test
+    void chargePointWithInvalidAmount_returnError() throws Exception {
+        long userId = 1L;
+        long invalidAmount = 0L;
+        when(pointService.chargePoint(userId, invalidAmount))
+                .thenThrow(PointException.invalidAmount(invalidAmount));
+
+        mockMvc.perform(patch("/point/{id}/charge", userId)
+                .contentType("application/json")
+                .content(String.valueOf(invalidAmount)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_AMOUNT"));
+    }
+
+    @Test
+    void chargePointForNonExistentUser_returnError() throws Exception {
+        long userId = 999L;
+        long amount = 100L;
+        when(pointService.chargePoint(userId, amount))
+                .thenThrow(PointException.userNotFound(userId));
+
+        mockMvc.perform(patch("/point/{id}/charge", userId)
+                .contentType("application/json")
+                .content(String.valueOf(amount)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("USER_NOT_FOUND"));
+    }
+
+    @Test
+    void usePointWithInvalidAmount_returnError() throws Exception {
+        long userId = 1L;
+        long invalidAmount = -100L;
+        when(pointService.usePoint(userId, invalidAmount))
+                .thenThrow(PointException.invalidAmount(invalidAmount));
+
+        mockMvc.perform(patch("/point/{id}/use", userId)
+                .contentType("application/json")
+                .content(String.valueOf(invalidAmount)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_AMOUNT"));
+    }
+
+    @Test
+    void usePointForNonExistentUser_returnError() throws Exception {
+        long userId = 999L;
+        long amount = 100L;
+        when(pointService.usePoint(userId, amount))
+                .thenThrow(PointException.userNotFound(userId));
+
+        mockMvc.perform(patch("/point/{id}/use", userId)
+                .contentType("application/json")
+                .content(String.valueOf(amount)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("USER_NOT_FOUND"));
+    }
+
+    @Test
+    void usePointWithInsufficientBalance_returnError() throws Exception {
+        long userId = 2L;
+        long amount = 1000L; // 보유 포인트(500)보다 큰 금액
+        when(pointService.usePoint(userId, amount))
+                .thenThrow(PointException.insufficientPoint(userId, amount, 500L));
+
+        mockMvc.perform(patch("/point/{id}/use", userId)
+                .contentType("application/json")
+                .content(String.valueOf(amount)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("INSUFFICIENT_POINT"));
     }
 }
